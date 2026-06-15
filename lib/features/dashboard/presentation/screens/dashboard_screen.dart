@@ -38,40 +38,41 @@ class DashboardScreen extends ConsumerWidget {
             Text(currentUser?.email ?? '',
                 style: Theme.of(context).textTheme.bodyMedium),
             const SizedBox(height: 32),
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkSpacing: 16,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 1.2,
-              children: [
-                _DashboardCard(
-                  icon: Icons.shopping_cart,
-                  title: 'Shopping List',
-                  onTap: () => Navigator.of(context).pushNamed('/shopping'),
-                ),
-                _DashboardCard(
-                  icon: Icons.inventory_2,
-                  title: 'Inventory',
-                  onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Coming soon')),
+            Expanded(
+              child: GridView.count(
+                crossAxisCount: 2,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+                childAspectRatio: 1.2,
+                children: [
+                  _DashboardCard(
+                    icon: Icons.shopping_cart,
+                    title: 'Shopping List',
+                    onTap: () => Navigator.of(context).pushNamed('/shopping'),
                   ),
-                ),
-                _DashboardCard(
-                  icon: Icons.analytics,
-                  title: 'Analytics',
-                  onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Coming soon')),
+                  _DashboardCard(
+                    icon: Icons.inventory_2,
+                    title: 'Inventory',
+                    onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Coming soon')),
+                    ),
                   ),
-                ),
-                _DashboardCard(
-                  icon: Icons.settings,
-                  title: 'Settings',
-                  onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Coming soon')),
+                  _DashboardCard(
+                    icon: Icons.analytics,
+                    title: 'Analytics',
+                    onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Coming soon')),
+                    ),
                   ),
-                ),
-              ],
+                  _DashboardCard(
+                    icon: Icons.settings,
+                    title: 'Settings',
+                    onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Coming soon')),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
