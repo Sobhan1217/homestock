@@ -1,29 +1,11 @@
-import 'package:hive/hive.dart';
-
-part 'shopping_item.g.dart';
-
-@HiveType(typeId: 1)
-class ShoppingItem extends HiveObject {
-  @HiveField(0)
-  late String id;
-
-  @HiveField(1)
-  late String itemName;
-
-  @HiveField(2)
-  late String category;
-
-  @HiveField(3)
-  late double quantity;
-
-  @HiveField(4)
-  late String unit;
-
-  @HiveField(5)
-  late bool isPurchased;
-
-  @HiveField(6)
-  late DateTime dateAdded;
+class ShoppingItem {
+  final String id;
+  final String itemName;
+  final String category;
+  final double quantity;
+  final String unit;
+  bool isPurchased;
+  final DateTime dateAdded;
 
   ShoppingItem({
     required this.id,
@@ -34,4 +16,27 @@ class ShoppingItem extends HiveObject {
     this.isPurchased = false,
     DateTime? dateAdded,
   }) : dateAdded = dateAdded ?? DateTime.now();
+
+  // Convert to JSON for Hive storage
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'itemName': itemName,
+    'category': category,
+    'quantity': quantity,
+    'unit': unit,
+    'isPurchased': isPurchased,
+    'dateAdded': dateAdded.toIso8601String(),
+  };
+
+  // Create from JSON
+  factory ShoppingItem.fromMap(Map<String, dynamic> map) {
+    return ShoppingItem(
+      id: map['id'] as String,
+      itemName: map['itemName'] as String,
+      category: map['category'] as String,
+      quantity: map['quantity'] as double? ?? 1.0,
+      unit: map['unit'] as String? ?? 'units',
+      dateAdded: DateTime.parse(map['dateAdded'] as String? ?? DateTime.now().toIso8601String()),
+    )..isPurchased = map['isPurchased'] as bool? ?? false;
+  }
 }

@@ -4,12 +4,6 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../../../../services/shopping_service.dart';
 import '../../../shopping/domain/entities/shopping_item.dart';
 
-final shoppingListProvider = FutureProvider((ref) async {
-  final service = ref.watch(shoppingServiceProvider);
-  await service.init();
-  return service.getPending();
-});
-
 class ShoppingListScreen extends ConsumerStatefulWidget {
   const ShoppingListScreen({Key? key}) : super(key: key);
 
@@ -19,9 +13,10 @@ class ShoppingListScreen extends ConsumerStatefulWidget {
 
 class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
   final itemCtrl = TextEditingController();
-  final categoryCtrl = TextEditingController();
+  String selectedCategory = 'Grocery';
   final quantityCtrl = TextEditingController(text: '1');
   String selectedUnit = 'units';
+  bool showPurchased = false;
 
   final categories = [
     'Grocery',
@@ -33,67 +28,108 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
   ];
   final units = ['units', 'kg', 'liters', 'grams', 'packets', 'bottles'];
 
+  @override
+  void initState() {
+    super.initState();
+    _initService();
+  }
+
+  Future<void> _initService() async {
+    final service = ref.read(shoppingServiceProvider);
+    await service.init();
+    setState(() {});
+  }
+
   Future<void> _addItem() async {
-    if (itemCtrl.text.isEmpty || categoryCtrl.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all fields')),
-      );
+    if (itemCtrl.text.isEmpty) {
+      _showSnackBar('Please enter item name', isError: true);
       return;
     }
 
-    final service = ref.read(shoppingServiceProvider);
-    await service.init();
-    await service.addItem(
-      itemName: itemCtrl.text,
-      category: categoryCtrl.text,
-      quantity: double.tryParse(quantityCtrl.text) ?? 1,
-      unit: selectedUnit,
-    );
-
-    itemCtrl.clear();
-    categoryCtrl.clear();
-    quantityCtrl.text = '1';
-    setState(() {});
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Item added to shopping list')),
+    try {
+      final service = ref.read(shoppingServiceProvider);
+      await service.addItem(
+        itemName: itemCtrl.text,
+        category: selectedCategory,
+        quantity: double.tryParse(quantityCtrl.text) ?? 1,
+        unit: selectedUnit,
       );
+
+      itemCtrl.clear();
+      quantityCtrl.text = '1';
+      selectedCategory = 'Grocery';
+      selectedUnit = 'units';
+      setState(() {});
+
+      _showSnackBar('Item added to shopping list');
+    } catch (e) {
+      _showSnackBar('Error adding item', isError: true);
     }
+  }
+
+  void _showSnackBar(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : Colors.green,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final service = ref.read(shoppingServiceProvider);
 
     return Scaffold(
       backgroundColor: scheme.surface,
       appBar: AppBar(
         title: const Text('Shopping List'),
         elevation: 0,
+        actions: [
+          if (service.getPurchased().isNotEmpty)
+            PopupMenuButton(
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  onTap: () async {
+                    await service.clearPurchased();
+                    setState(() {});
+                    _showSnackBar('Cleared purchased items');
+                  },
+                  child: const Text('Clear Purchased'),
+                ),
+              ],
+            ),
+        ],
       ),
       body: Column(
         children: [
-          // Add Item Card
+          // Add Item Section
           Container(
             color: scheme.primary,
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Add New Item',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: scheme.onPrimary,
-                    )),
+                Text(
+                  'Add New Item',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: scheme.onPrimary,
+                  ),
+                ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: itemCtrl,
                   style: TextStyle(color: scheme.onPrimary),
                   decoration: InputDecoration(
                     hintText: 'Item name',
-                    hintStyle: TextStyle(color: scheme.onPrimary.withOpacity(0.6)),
+                    hintStyle: TextStyle(
+                      color: scheme.onPrimary.withOpacity(0.6),
+                    ),
+                    prefixIcon: Icon(Icons.shopping_bag,
+                        color: scheme.onPrimary),
                     filled: true,
                     fillColor: scheme.onPrimary.withOpacity(0.1),
                     border: OutlineInputBorder(
@@ -102,17 +138,27 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
                 Row(
                   children: [
                     Expanded(
+                      flex: 2,
                       child: DropdownButtonFormField<String>(
-                        value: categories.first,
-                        onChanged: (val) => categoryCtrl.text = val ?? '',
+                        value: selectedCategory,
+                        onChanged: (val) =>
+                            setState(() => selectedCategory = val ?? 'Grocery'),
                         items: categories
-                            .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                            .map((c) => DropdownMenuItem(
+                                  value: c,
+                                  child: Text(c,
+                                      style: TextStyle(
+                                          color: scheme.onPrimary)),
+                                ))
                             .toList(),
                         decoration: InputDecoration(
+                          labelText: 'Category',
+                          labelStyle: TextStyle(
+                              color: scheme.onPrimary),
                           filled: true,
                           fillColor: scheme.onPrimary.withOpacity(0.1),
                           border: OutlineInputBorder(
@@ -123,14 +169,15 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
                         dropdownColor: scheme.primary,
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: TextField(
                         controller: quantityCtrl,
                         style: TextStyle(color: scheme.onPrimary),
                         decoration: InputDecoration(
-                          hintText: 'Qty',
-                          hintStyle: TextStyle(color: scheme.onPrimary.withOpacity(0.6)),
+                          labelText: 'Qty',
+                          labelStyle: TextStyle(
+                              color: scheme.onPrimary),
                           filled: true,
                           fillColor: scheme.onPrimary.withOpacity(0.1),
                           border: OutlineInputBorder(
@@ -143,17 +190,26 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
                 Row(
                   children: [
                     Expanded(
                       child: DropdownButtonFormField<String>(
                         value: selectedUnit,
-                        onChanged: (val) => setState(() => selectedUnit = val ?? 'units'),
+                        onChanged: (val) =>
+                            setState(() => selectedUnit = val ?? 'units'),
                         items: units
-                            .map((u) => DropdownMenuItem(value: u, child: Text(u)))
+                            .map((u) => DropdownMenuItem(
+                                  value: u,
+                                  child: Text(u,
+                                      style: TextStyle(
+                                          color: scheme.onPrimary)),
+                                ))
                             .toList(),
                         decoration: InputDecoration(
+                          labelText: 'Unit',
+                          labelStyle: TextStyle(
+                              color: scheme.onPrimary),
                           filled: true,
                           fillColor: scheme.onPrimary.withOpacity(0.1),
                           border: OutlineInputBorder(
@@ -164,11 +220,12 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
                         dropdownColor: scheme.primary,
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 8),
                     FilledButton(
                       style: FilledButton.styleFrom(
                         backgroundColor: scheme.onPrimary,
                         foregroundColor: scheme.primary,
+                        padding: const EdgeInsets.all(12),
                       ),
                       onPressed: _addItem,
                       child: const Icon(Icons.add),
@@ -178,30 +235,77 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
               ],
             ),
           ),
-          // Shopping Items List
+
+          // Tab to switch between pending and purchased
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: !showPurchased
+                          ? scheme.primary
+                          : scheme.primary.withOpacity(0.3),
+                      foregroundColor: !showPurchased
+                          ? scheme.onPrimary
+                          : scheme.primary,
+                    ),
+                    onPressed: () => setState(() => showPurchased = false),
+                    child: Text('Pending (${service.getPending().length})'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: showPurchased
+                          ? scheme.primary
+                          : scheme.primary.withOpacity(0.3),
+                      foregroundColor: showPurchased
+                          ? scheme.onPrimary
+                          : scheme.primary,
+                    ),
+                    onPressed: () => setState(() => showPurchased = true),
+                    child: Text('Purchased (${service.getPurchased().length})'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Items List
           Expanded(
-            child: ValueListenableBuilder<Box<ShoppingItem>>(
-              valueListenable: Hive.box<ShoppingItem>(ShoppingService.boxName)
+            child: ValueListenableBuilder<Box<Map>>(
+              valueListenable: Hive.box<Map>(ShoppingService.boxName)
                   .listenable(),
               builder: (context, box, _) {
-                final items = box.values
-                    .where((item) => !item.isPurchased)
-                    .toList()
-                  ..sort((a, b) => b.dateAdded.compareTo(a.dateAdded));
+                final items = showPurchased
+                    ? service.getPurchased()
+                    : service.getPending();
 
                 if (items.isEmpty) {
                   return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.shopping_cart_outlined,
-                            size: 64, color: scheme.outline.withOpacity(0.3)),
+                        Icon(
+                          showPurchased
+                              ? Icons.done_all
+                              : Icons.shopping_cart_outlined,
+                          size: 64,
+                          color: scheme.outline.withOpacity(0.3),
+                        ),
                         const SizedBox(height: 16),
-                        Text('No items in shopping list',
-                            style: TextStyle(
-                              color: scheme.outline,
-                              fontSize: 16,
-                            )),
+                        Text(
+                          showPurchased
+                              ? 'No purchased items yet'
+                              : 'Shopping list is empty',
+                          style: TextStyle(
+                            color: scheme.outline,
+                            fontSize: 16,
+                          ),
+                        ),
                       ],
                     ),
                   );
@@ -218,26 +322,30 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
                         leading: Checkbox(
                           value: item.isPurchased,
                           onChanged: (val) async {
-                            final service = ref.read(shoppingServiceProvider);
-                            await service.init();
-                            await service.markPurchased(item.id, val ?? false);
+                            await service.markPurchased(
+                                item.id, val ?? false);
+                            setState(() {});
                           },
                         ),
-                        title: Text(item.itemName,
-                            style: item.isPurchased
-                                ? TextStyle(
-                                    decoration: TextDecoration.lineThrough,
-                                    color: scheme.outline,
-                                  )
-                                : null),
+                        title: Text(
+                          item.itemName,
+                          style: item.isPurchased
+                              ? TextStyle(
+                                  decoration: TextDecoration.lineThrough,
+                                  color: scheme.outline,
+                                )
+                              : null,
+                        ),
                         subtitle: Text(
-                            '${item.quantity} ${item.unit} • ${item.category}'),
+                          '${item.quantity} ${item.unit} • ${item.category}',
+                        ),
                         trailing: IconButton(
-                          icon: const Icon(Icons.delete_outline),
+                          icon: const Icon(Icons.delete_outline,
+                              color: Colors.red),
                           onPressed: () async {
-                            final service = ref.read(shoppingServiceProvider);
-                            await service.init();
                             await service.deleteItem(item.id);
+                            setState(() {});
+                            _showSnackBar('Item deleted');
                           },
                         ),
                       ),
@@ -255,7 +363,6 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
   @override
   void dispose() {
     itemCtrl.dispose();
-    categoryCtrl.dispose();
     quantityCtrl.dispose();
     super.dispose();
   }
