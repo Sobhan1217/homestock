@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'features/auth/presentation/screens/login_screen.dart';
 import 'features/auth/presentation/screens/signup_screen.dart';
+import 'features/dashboard/presentation/screens/dashboard_screen.dart';
 
 class HomeStockApp extends ConsumerWidget {
   const HomeStockApp({super.key});
@@ -26,6 +27,7 @@ class HomeStockApp extends ConsumerWidget {
       routes: {
         '/login': (context) => const LoginScreen(),
         '/signup': (context) => const SignupScreen(),
+        '/dashboard': (context) => const DashboardScreen(),
       },
     );
   }
