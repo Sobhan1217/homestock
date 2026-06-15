@@ -6,7 +6,6 @@ RUN apt-get update && apt-get install -y \
 RUN git clone https://github.com/flutter/flutter.git -b stable /flutter
 ENV PATH="/flutter/bin:/flutter/bin/cache/dart-sdk/bin:${PATH}"
 
-# Allow flutter to run as root
 ENV FLUTTER_SUPPRESS_ANALYTICS=true
 RUN git config --global --add safe.directory /flutter
 
@@ -18,10 +17,13 @@ COPY . .
 
 RUN mkdir -p lib && \
     if [ ! -f lib/firebase_options.dart ]; then \
-      printf "import 'package:firebase_core/firebase_core.dart';\nclass DefaultFirebaseOptions {\n  static FirebaseOptions get currentPlatform => const FirebaseOptions(\n    apiKey: 'stub', appId: 'stub',\n    messagingSenderId: 'stub', projectId: 'stub');\n}" > lib/firebase_options.dart; \
+      printf "import 'package:firebase_core/firebase_core.dart';\nclass DefaultFirebaseOptions {\n  static FirebaseOptions get currentPlatform => web;\n  static const FirebaseOptions web = FirebaseOptions(\n    apiKey: 'AIzaSyAn_7yMeuqxwfR2HJ-jG93xqU2nxRgfkT4',\n    appId: '1:601110560690:web:25af25de849d2b25282eab',\n    messagingSenderId: '601110560690',\n    projectId: 'homestock-8825d',\n    authDomain: 'homestock-8825d.firebaseapp.com',\n    storageBucket: 'homestock-8825d.firebasestorage.app',\n    measurementId: 'G-6DG39J3314',\n  );\n}" > lib/firebase_options.dart; \
     fi
 
 RUN flutter pub get
+
+# Run build_runner for Hive code generation
+RUN dart run build_runner build --delete-conflicting-outputs || true
 
 # Configure project for web
 RUN flutter create . --platforms web
