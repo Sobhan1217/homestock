@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../../../services/auth_service.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -12,11 +14,60 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final emailCtrl = TextEditingController();
   final passCtrl = TextEditingController();
   bool obscurePass = true;
+  bool isLoading = false;
+
+  Future<void> _handleLogin() async {
+    if (emailCtrl.text.isEmpty || passCtrl.text.isEmpty) {
+      _showError('Please fill all fields');
+      return;
+    }
+
+    setState(() => isLoading = true);
+
+    try {
+      final authService = ref.read(authServiceProvider);
+      final result = await authService.login(
+        email: emailCtrl.text,
+        password: passCtrl.text,
+      );
+
+      if (result != null && mounted) {
+        Navigator.of(context).pushReplacementNamed('/dashboard');
+      }
+    } on FirebaseAuthException catch (e) {
+      _showError(_parseFirebaseError(e.code));
+    } catch (e) {
+      _showError('Login failed. Please try again.');
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
+  }
+
+  String _parseFirebaseError(String code) {
+    switch (code) {
+      case 'user-not-found':
+        return 'User not found. Please sign up first.';
+      case 'wrong-password':
+        return 'Wrong password. Please try again.';
+      case 'invalid-email':
+        return 'Invalid email address';
+      case 'user-disabled':
+        return 'User account has been disabled';
+      default:
+        return 'Login failed. Please try again.';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    
+
     return Scaffold(
       backgroundColor: scheme.primary,
       body: SafeArea(
@@ -51,6 +102,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: 48),
                 TextField(
                   controller: emailCtrl,
+                  enabled: !isLoading,
                   style: TextStyle(color: scheme.onPrimary),
                   decoration: InputDecoration(
                     hintText: 'Email',
@@ -67,6 +119,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: 16),
                 TextField(
                   controller: passCtrl,
+                  enabled: !isLoading,
                   obscureText: obscurePass,
                   style: TextStyle(color: scheme.onPrimary),
                   decoration: InputDecoration(
@@ -98,13 +151,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  onPressed: () {
-                    // TODO: Implement login with Firebase
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Login coming soon')),
-                    );
-                  },
-                  child: const Text('Login', style: TextStyle(fontSize: 16)),
+                  onPressed: isLoading ? null : _handleLogin,
+                  child: isLoading
+                      ? SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation(scheme.primary),
+                          ),
+                        )
+                      : const Text('Login', style: TextStyle(fontSize: 16)),
                 ),
                 const SizedBox(height: 16),
                 Row(
@@ -126,8 +182,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  onPressed: () {
-                    // Navigate to signup
+                  onPressed: isLoading ? null : () {
                     Navigator.of(context).pushNamed('/signup');
                   },
                   child: Text('Create Account',
