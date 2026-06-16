@@ -4,6 +4,7 @@ import '../../../../services/auth_service.dart';
 import '../../../../services/dashboard_service.dart';
 import '../../../inventory/presentation/screens/inventory_list_screen.dart';
 import '../../../shopping/presentation/screens/shopping_list_screen.dart';
+import '../../../family/presentation/screens/family_management_screen.dart';
 import 'dashboard_stats_screen.dart';
 
 class DashboardScreen extends ConsumerWidget {
@@ -89,10 +90,12 @@ class DashboardScreen extends ConsumerWidget {
                     ),
                   ),
                   _DashboardCard(
-                    icon: Icons.settings,
-                    title: 'Settings',
-                    onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Coming soon')),
+                    icon: Icons.family_restroom,
+                    title: 'Family',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const FamilyManagementScreen(),
+                      ),
                     ),
                   ),
                 ],
@@ -120,7 +123,7 @@ class DashboardScreen extends ConsumerWidget {
               _StatCard(
                 label: 'Inventory',
                 value: '${stats['totalInventory']}',
-                color: scheme.primary,
+                color: Colors.blue,
                 icon: Icons.inventory_2,
               ),
               const SizedBox(width: 12),
@@ -148,7 +151,7 @@ class DashboardScreen extends ConsumerWidget {
               _StatCard(
                 label: 'To Buy',
                 value: '${stats['pendingShopping']}',
-                color: Colors.blue,
+                color: Colors.purple,
                 icon: Icons.shopping_cart,
               ),
             ],

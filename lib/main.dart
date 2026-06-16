@@ -6,6 +6,7 @@ import 'firebase_options.dart';
 import 'app.dart';
 import 'services/shopping_service.dart';
 import 'services/inventory_service.dart';
+import 'services/family_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,6 +17,7 @@ Future<void> main() async {
   // Open Hive boxes
   await Hive.openBox<Map>(ShoppingService.boxName);
   await Hive.openBox<Map>(InventoryService.boxName);
+  await Hive.openBox<Map>(FamilyService.boxName);
   
   // Initialize Firebase
   await Firebase.initializeApp(
