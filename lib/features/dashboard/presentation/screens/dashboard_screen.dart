@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../services/auth_service.dart';
+import '../../presentation/screens/dashboard_screen.dart';
+import '../../../inventory/presentation/screens/inventory_list_screen.dart';
+import '../../../shopping/presentation/screens/shopping_list_screen.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({Key? key}) : super(key: key);
@@ -46,15 +49,21 @@ class DashboardScreen extends ConsumerWidget {
                 childAspectRatio: 1.2,
                 children: [
                   _DashboardCard(
-                    icon: Icons.shopping_cart,
-                    title: 'Shopping List',
-                    onTap: () => Navigator.of(context).pushNamed('/shopping'),
-                  ),
-                  _DashboardCard(
                     icon: Icons.inventory_2,
                     title: 'Inventory',
-                    onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Coming soon')),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const InventoryListScreen(),
+                      ),
+                    ),
+                  ),
+                  _DashboardCard(
+                    icon: Icons.shopping_cart,
+                    title: 'Shopping List',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const ShoppingListScreen(),
+                      ),
                     ),
                   ),
                   _DashboardCard(
