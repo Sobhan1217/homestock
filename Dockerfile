@@ -22,13 +22,9 @@ RUN mkdir -p lib && \
 
 RUN flutter pub get
 
-# Run build_runner for Hive code generation
-RUN dart run build_runner build --delete-conflicting-outputs || true
-
-# Configure project for web
 RUN flutter create . --platforms web
 
-RUN flutter build web --release --no-pub
+RUN flutter build web --release
 
 FROM nginx:alpine
 COPY --from=build /app/build/web /usr/share/nginx/html

@@ -46,10 +46,11 @@ class Family {
     required this.id,
     required this.name,
     required this.adminId,
-    this.members = const [],
+    List<FamilyMember>? members,
     required this.inviteCode,
     DateTime? createdAt,
-  }) : createdAt = createdAt ?? DateTime.now();
+  })  : members = members ?? [],
+        createdAt = createdAt ?? DateTime.now();
 
   Map<String, dynamic> toMap() => {
     'id': id,
