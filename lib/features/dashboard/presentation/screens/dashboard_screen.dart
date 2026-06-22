@@ -1,241 +1,378 @@
+// lib/features/dashboard/presentation/screens/dashboard_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../services/auth_service.dart';
+import 'package:go_router/go_router.dart';
+import '../providers/auth_provider.dart';
 import '../../../../services/dashboard_service.dart';
-import '../../../inventory/presentation/screens/inventory_list_screen.dart';
-import '../../../shopping/presentation/screens/shopping_list_screen.dart';
-import '../../../family/presentation/screens/family_management_screen.dart';
-import 'dashboard_stats_screen.dart';
+import '../../inventory/presentation/screens/categories_browser_screen.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final authService = ref.read(authServiceProvider);
-    final currentUser = authService.currentUser;
     final scheme = Theme.of(context).colorScheme;
+    final authState = ref.watch(authStateProvider);
+    final statsAsync = ref.watch(dashboardStatsProvider);
 
     return Scaffold(
       backgroundColor: scheme.surface,
       appBar: AppBar(
-        title: const Text('HomeStock'),
+        title: const Text('HomeStock',
+            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 22)),
+        elevation: 0,
+        centerTitle: false,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await authService.logout();
-              if (context.mounted) {
-                Navigator.of(context).pushReplacementNamed('/login');
-              }
-            },
+          PopupMenuButton(
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                onTap: () {
+                  ref.read(authServiceProvider).logout();
+                  context.go('/login');
+                },
+                child: const Row(
+                  children: [
+                    Icon(Icons.logout, size: 18),
+                    SizedBox(width: 8),
+                    Text('Logout'),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
+      body: authState.when(
+        data: (user) => SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // User Greeting
-              Text('Welcome, ${currentUser?.displayName ?? 'User'}!',
-                  style: Theme.of(context).textTheme.headlineSmall),
-              const SizedBox(height: 8),
-              Text(currentUser?.email ?? '',
-                  style: Theme.of(context).textTheme.bodyMedium),
-              const SizedBox(height: 32),
-
-              // Quick Stats
-              _buildQuickStats(context, ref, scheme),
-              const SizedBox(height: 32),
-
-              // Navigation Cards
-              Text('Features',
-                  style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 16),
-              GridView.count(
-                crossAxisCount: 2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                childAspectRatio: 1.2,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                children: [
-                  _DashboardCard(
-                    icon: Icons.inventory_2,
-                    title: 'Inventory',
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const InventoryListScreen(),
+              // Header Section
+              Container(
+                color: scheme.primary,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Welcome back!',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: scheme.onPrimary.withOpacity(0.8),
                       ),
                     ),
-                  ),
-                  _DashboardCard(
-                    icon: Icons.shopping_cart,
-                    title: 'Shopping List',
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const ShoppingListScreen(),
+                    const SizedBox(height: 4),
+                    Text(
+                      user?.email?.split('@')[0] ?? 'User',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        color: scheme.onPrimary,
                       ),
                     ),
-                  ),
-                  _DashboardCard(
-                    icon: Icons.analytics,
-                    title: 'Detailed Stats',
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const DashboardStatsScreen(),
-                      ),
-                    ),
-                  ),
-                  _DashboardCard(
-                    icon: Icons.family_restroom,
-                    title: 'Family',
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const FamilyManagementScreen(),
-                      ),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+
+              // Stats Cards (TOP PRIORITY)
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: statsAsync.when(
+                  data: (stats) => SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _StatCard(
+                          icon: Icons.inventory_2,
+                          label: 'Inventory',
+                          value: stats['total'] ?? 0,
+                          color: const Color(0xFF1976D2),
+                        ),
+                        const SizedBox(width: 12),
+                        _StatCard(
+                          icon: Icons.check_circle,
+                          label: 'In Stock',
+                          value: stats['inStock'] ?? 0,
+                          color: const Color(0xFF388E3C),
+                        ),
+                        const SizedBox(width: 12),
+                        _StatCard(
+                          icon: Icons.warning_amber,
+                          label: 'Low Stock',
+                          value: stats['lowStock'] ?? 0,
+                          color: const Color(0xFFF57C00),
+                        ),
+                        const SizedBox(width: 12),
+                        _StatCard(
+                          icon: Icons.error,
+                          label: 'Out of Stock',
+                          value: stats['outOfStock'] ?? 0,
+                          color: const Color(0xFFC62828),
+                        ),
+                        const SizedBox(width: 12),
+                        _StatCard(
+                          icon: Icons.shopping_cart,
+                          label: 'To Buy',
+                          value: stats['toBuy'] ?? 0,
+                          color: const Color(0xFF6A1B9A),
+                        ),
+                      ],
+                    ),
+                  ),
+                  loading: () => const SizedBox(
+                    height: 120,
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+                  error: (err, stack) => Text('Error: $err'),
+                ),
+              ),
+
+              // Quick Actions Section
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  'Quick Actions',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: GridView.count(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: [
+                    _ActionCard(
+                      icon: Icons.shopping_bag_outlined,
+                      title: 'Shopping\nList',
+                      onTap: () => context.push('/shopping-list'),
+                      color: Colors.blue,
+                    ),
+                    _ActionCard(
+                      icon: Icons.inventory_2_outlined,
+                      title: 'Manage\nInventory',
+                      onTap: () => context.push('/inventory'),
+                      color: Colors.green,
+                    ),
+                    _ActionCard(
+                      icon: Icons.add_circle_outline,
+                      title: 'Add New\nItem',
+                      onTap: () => context.push('/inventory/add'),
+                      color: Colors.orange,
+                    ),
+                    _ActionCard(
+                      icon: Icons.category_outlined,
+                      title: 'Browse\nCategories',
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const CategoriesBrowserScreen(),
+                        ),
+                      ),
+                      color: Colors.purple,
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 32),
+
+              // Categories Preview Section
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  'Shop by Category',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: _CategoriesPreview(
+                  onViewAll: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const CategoriesBrowserScreen(),
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 32),
             ],
           ),
         ),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, stack) => Center(child: Text('Error: $err')),
       ),
-    );
-  }
-
-  Widget _buildQuickStats(BuildContext context, WidgetRef ref, ColorScheme scheme) {
-    return FutureBuilder<Map<String, dynamic>>(
-      future: ref.read(dashboardServiceProvider).getStats(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        final stats = snapshot.data!;
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              _StatCard(
-                label: 'Inventory',
-                value: '${stats['totalInventory']}',
-                color: Colors.blue,
-                icon: Icons.inventory_2,
-              ),
-              const SizedBox(width: 12),
-              _StatCard(
-                label: 'In Stock',
-                value: '${stats['inStock']}',
-                color: Colors.green,
-                icon: Icons.check_circle,
-              ),
-              const SizedBox(width: 12),
-              _StatCard(
-                label: 'Low Stock',
-                value: '${stats['lowStock']}',
-                color: Colors.orange,
-                icon: Icons.warning,
-              ),
-              const SizedBox(width: 12),
-              _StatCard(
-                label: 'Out',
-                value: '${stats['outOfStock']}',
-                color: Colors.red,
-                icon: Icons.error,
-              ),
-              const SizedBox(width: 12),
-              _StatCard(
-                label: 'To Buy',
-                value: '${stats['pendingShopping']}',
-                color: Colors.purple,
-                icon: Icons.shopping_cart,
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 }
 
 class _StatCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color color;
   final IconData icon;
+  final String label;
+  final int value;
+  final Color color;
 
   const _StatCard({
+    required this.icon,
     required this.label,
     required this.value,
     required this.color,
-    required this.icon,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      width: 105,
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
         border: Border.all(color: color, width: 2),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: color, size: 32),
+          Icon(icon, color: color, size: 28),
           const SizedBox(height: 8),
-          Text(value,
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: color,
-              )),
+          Text(
+            value.toString(),
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(label,
-              style: TextStyle(
-                fontSize: 12,
-                color: color,
-              )),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 10, color: color),
+          ),
         ],
       ),
     );
   }
 }
 
-class _DashboardCard extends StatelessWidget {
+class _ActionCard extends StatelessWidget {
   final IconData icon;
   final String title;
   final VoidCallback onTap;
+  final Color color;
 
-  const _DashboardCard({
+  const _ActionCard({
     required this.icon,
     required this.title,
     required this.onTap,
+    required this.color,
   });
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    return Card(
-      child: InkWell(
-        onTap: onTap,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          gradient: LinearGradient(
+            colors: [color.withOpacity(0.1), color.withOpacity(0.05)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          border: Border.all(color: color.withOpacity(0.2)),
+        ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 48, color: scheme.primary),
+            Icon(icon, size: 40, color: color),
             const SizedBox(height: 12),
-            Text(title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontWeight: FontWeight.w600)),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: scheme.onSurface,
+              ),
+            ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _CategoriesPreview extends StatelessWidget {
+  final VoidCallback onViewAll;
+
+  const _CategoriesPreview({required this.onViewAll});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    final categories = [
+      ('🛒', 'Grocery'),
+      ('🍳', 'Kitchen'),
+      ('🧹', 'Cleaning'),
+      ('🚿', 'Bathroom'),
+      ('🛏️', 'Bedroom'),
+      ('👕', 'Laundry'),
+    ];
+
+    return Column(
+      children: [
+        GridView.count(
+          crossAxisCount: 3,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          children: categories.map((cat) {
+            return GestureDetector(
+              onTap: onViewAll,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: scheme.outline.withOpacity(0.2)),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(cat.$1, style: const TextStyle(fontSize: 32)),
+                    const SizedBox(height: 8),
+                    Text(
+                      cat.$2,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton(
+            onPressed: onViewAll,
+            child: const Text('View All Categories'),
+          ),
+        ),
+      ],
     );
   }
 }

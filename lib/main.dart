@@ -1,3 +1,4 @@
+// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -9,18 +10,20 @@ import 'services/inventory_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Initialize Hive
+
+  // Initialize Hive first
   await Hive.initFlutter();
-  
-  // Open Hive boxes
   await Hive.openBox<Map>(ShoppingService.boxName);
   await Hive.openBox<Map>(InventoryService.boxName);
-  
+
   // Initialize Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  
-  runApp(const ProviderScope(child: HomeStockApp()));
+
+  runApp(
+    const ProviderScope(
+      child: HomeStockApp(),
+    ),
+  );
 }
