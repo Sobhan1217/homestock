@@ -58,4 +58,8 @@ class AuthService {
 
   // Stream of auth state changes
   Stream<User?> get authStateChanges => _auth.authStateChanges();
+  // Get current user (async wrapper for router redirect)
+  Future<User?> getCurrentUser() async {
+    return _auth.currentUser;
+  }
 }

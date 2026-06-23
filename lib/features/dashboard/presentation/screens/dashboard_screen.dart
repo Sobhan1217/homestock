@@ -1,10 +1,12 @@
 // lib/features/dashboard/presentation/screens/dashboard_screen.dart
+// lib/features/dashboard/presentation/screens/dashboard_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../providers/auth_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../../../services/dashboard_service.dart';
-import '../../inventory/presentation/screens/categories_browser_screen.dart';
+import '../../../inventory/presentation/screens/categories_browser_screen.dart';
+import '../../../../services/auth_service.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({Key? key}) : super(key: key);
